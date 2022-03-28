@@ -11,8 +11,12 @@ Space method (FTCS). This method and its results are extensively discussed in
 the README.md file of this directory.
 
 Output:
-Figure that presents the obtained u(t, x, y) in evenly spaced timeframes.
+Pickle file with solution of the heat equation, u(t, x, y), evaluated in a
+regular spatial grid and at evenly spaced times, and its representation in a
+igure or gif file.
 """
+
+import os
 
 import time
 
@@ -24,6 +28,8 @@ import jax
 import jax.numpy as jnp
 
 import numpy as np
+
+import pickle
 
 import utils.plot
 
@@ -68,12 +74,13 @@ flags.DEFINE_enum(
     "and 'numpy' or 'jax' for accelerated array operations)")
 
 # Output variables
-flags.DEFINE_enum(
-    "output_format", "figure", ["figure", "gif"], "Defines the "
-    "format in which the output is obtained. If figure, it outputs a figure "
-    "with several subplots at different timesteps. If gif, it outputs a gif "
-    "with several plots at different timesteps.")
-flags.DEFINE_string("output_filename", "fdm_results",
+flags.DEFINE_list(
+    "output_format", ["figure", "gif"], "Defines the formats in which the "
+    "output is obtained. Only two formats are available: gif and figure. "
+    "If 'figure' is in the list provided, it outputs a figure with several "
+    "subplots at different timesteps. If 'gif' is in the list provided, it "
+    "outputs a gif with several plots at different timesteps.")
+flags.DEFINE_string("output_folder", "fdm_results",
                     "Name of the directory where the output is stored.")
 flags.DEFINE_integer("num_plots",
                      100,
@@ -327,8 +334,8 @@ def main(_):
           f"temperature: {FLAGS.cold_edge_temp}; Initial points temperature: "
           f"{FLAGS.initial_temp}")
     print(f"Vectorization strategy: {FLAGS.vectorization_strategy}")
-    print(f"The output is saved as {FLAGS.output_format}, named "
-          f"{FLAGS.output_filename}.")
+    print(f"The output is saved as {FLAGS.output_format} in "
+          f"{FLAGS.output_folder}.")
 
     # Compute spatial grid spacings, time step and relevant problem variables
     delta_t = compute_dimension_delta(FLAGS.t_final, FLAGS.num_timeframes)
@@ -356,21 +363,31 @@ def main(_):
                                       FLAGS.num_timeframes, FLAGS.num_plots,
                                       FLAGS.vectorization_strategy)
 
-    # Plots
-    if FLAGS.output_format == "figure":
-        utils.plot.generate_figures_across_time(
-            u_memorized_timeframes,
-            FLAGS.plate_length,
-            FLAGS.diff_coef,
-            holes_list=[],
-            output_filename=FLAGS.output_filename)
-    elif FLAGS.output_format == "gif":
-        utils.plot.generate_gif_across_time(
-            u_memorized_timeframes,
-            FLAGS.plate_length,
-            FLAGS.diff_coef,
-            holes_list=[],
-            output_filename=FLAGS.output_filename)
+    # Generate new directory to save results
+    current_directory = os.getcwd()
+    results_folder_path = os.path.join(current_directory, FLAGS.output_folder)
+    if not os.path.exists(results_folder_path):
+        os.mkdir(results_folder_path)
+
+    # Save results in the generated directory
+    with open(os.path.join(results_folder_path, "fdm_results.pickle"),
+              "wb") as f:
+        pickle.dump(u_memorized_timeframes, f)
+
+    # Plot results
+    if "figure" in FLAGS.output_format:
+        utils.plot.generate_figures_across_time(u_memorized_timeframes,
+                                                FLAGS.plate_length,
+                                                FLAGS.diff_coef,
+                                                holes_list=[],
+                                                output_path=results_folder_path)
+
+    if "gif" in FLAGS.output_format:
+        utils.plot.generate_gif_across_time(u_memorized_timeframes,
+                                            FLAGS.plate_length,
+                                            FLAGS.diff_coef,
+                                            holes_list=[],
+                                            output_path=results_folder_path)
 
 
 if __name__ == "__main__":
