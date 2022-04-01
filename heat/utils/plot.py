@@ -19,18 +19,19 @@ def generate_figures_across_time(u_memory,
                                  holes_temperature=0,
                                  output_path=None,
                                  error_bool=False):
-    """Plot the solution function obtained in some timeframes.
+    """Plots the solution function obtained in a set of timeframes.
 
     Args:
-        u_memory: Saved timeframes to be plotted [[t1, u1], ..., [tk, uk]]. t_i
-        are the time instants respective to the plate u_i, which is a matrix
+        u_memory: Saved timeframes to be plotted [[t_1, u_1], ..., [t_k, u_k]].
+        t_i are the time instants respective to the plate u_i, which is a matrix
         representing the plate with each entry corresponding to the temperature
         at that given point.
         plate_length: Length of the plate edges.
-        cold_temp: Lower temperature to be plotted.
-        hot_temp: Higher temperature to be plotted.
-        holes_list: List of holes named tuples.
-        output_filename: Output filename.
+        diff_coef: Diffusion coeficient considered
+        holes_list: List of holes (named tuples) considered
+        holes_temperature: Temperature of holes boundary. The interior points of
+        the hole are plotted with that temperature
+        output_path: Path where the gif is saved.
 
     Returns:
         Plot of the inferred solution function in the prescribed timesteps.
@@ -181,13 +182,13 @@ def point_within_holes(x_point, y_point, holes_list):
         Boolean that indicates if the point provided is inside the holes of the
         plate
     """
-
-    for hole_coords in holes_list:
-        x_center, y_center, radius = hole_coords
-        if (x_point - x_center)**2 + (y_point - y_center)**2 < radius**2:
-            return True
-
-    return False
+    if holes_list is not None:
+        for hole_coords in holes_list:
+            x_center, y_center, radius = hole_coords
+            if (x_point - x_center)**2 + (y_point - y_center)**2 < radius**2:
+                return True
+    else:
+        return False
 
 
 def generate_gif_across_time(u_memory,
@@ -197,7 +198,7 @@ def generate_gif_across_time(u_memory,
                              holes_temperature=0,
                              output_path=None,
                              error_bool=False):
-    """Generates a gif of the solution function obtained in some timeframes.
+    """Generates a gif of the solution function obtained in a set of timeframes.
 
     Args:
         u_memory: Saved timeframes to be plotted [[t_1, u_1], ..., [t_k, u_k]].
@@ -205,13 +206,15 @@ def generate_gif_across_time(u_memory,
         representing the plate with each entry corresponding to the temperature
         at that given point.
         plate_length: Length of the plate edges.
-        cold_temp: Lower temperature to be plotted.
-        hot_temp: Higher temperature to be plotted.
-        holes_list: List of holes named tuples.
-        output_filename: Output filename.
+        diff_coef: Diffusion coeficient considered
+        holes_list: List of holes (named tuples) considered
+        holes_temperature: Temperature of holes boundary. The interior points of
+        the hole are plotted with that temperature
+        output_path: Path where the gif is saved.
 
     Returns:
-        Plot of the inferred solution function in the prescribed timesteps.
+        Gif (and auxiliary plots) of the inferred solution function in the
+        prescribed timesteps.
     """
 
     # Initialization
@@ -269,6 +272,7 @@ def generate_gif_from_frames_in_directory(frames_directory, movie_directory,
     Returns:
         A gif from the frames in frames_directory.
     """
+
     # Read all .png files in frames_directory
     frames_list = [
         file for file in os.listdir(frames_directory) if file.endswith(".png")

@@ -289,9 +289,6 @@ def main(_):
     metadata = {
         "plate_length": FLAGS.plate_length,
         "diff_coef": FLAGS.diff_coef,
-        "holes_list": holes_list,
-        "holes_temp": FLAGS.holes_temp,
-        "hot_edge_temp": FLAGS.hot_edge_temp_to_plot
     }
     with open(os.path.join(results_folder_path, "data.pickle"), "wb") as f:
         pickle.dump((u_inferred_timeframes, metadata), f)
