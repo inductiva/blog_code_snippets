@@ -5,6 +5,9 @@ solutions provided via FDM and via IDRLnet. This error (absolute value of the
 difference) is computed for each spatio-temporal point.
 Finally, this error is plotted in a figure with the error for each timeframe or
 in an animated file (gif).
+
+Note that this script is not prepared to receive IDRLnet solutions considering
+a domain with holes, as it is not possible to consider such scenario with FDM.
 """
 
 import os
@@ -67,9 +70,7 @@ def main(_):
             error_timeframes,
             metadata["plate_length"],
             metadata["diff_coef"],
-            metadata["holes_list"],
-            metadata["holes_temp"],
-            error_directory,
+            output_path=error_directory,
             error_bool=True,
         )
     if "gif" in FLAGS.output_format:
@@ -77,9 +78,7 @@ def main(_):
             error_timeframes,
             metadata["plate_length"],
             metadata["diff_coef"],
-            metadata["holes_list"],
-            metadata["holes_temp"],
-            error_directory,
+            output_path=error_directory,
             error_bool=True,
         )
 
