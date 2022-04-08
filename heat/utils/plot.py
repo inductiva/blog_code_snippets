@@ -165,7 +165,9 @@ def filter_out_holes(grid_to_plot, holes_list, holes_temperatures, grid_limits,
     for x_idx, x_value in enumerate(x_coordinates_grid):
         for y_idx, y_value in enumerate(y_coordinates_grid):
             if point_within_holes(x_value, y_value, holes_list):
-                grid_to_plot[x_idx, y_idx] = holes_temperatures
+                # Note that x is denoted in the horizontal axis of the grid and
+                # y in the vertical one. Thus, we have the following indexing:
+                grid_to_plot[y_idx, x_idx] = holes_temperatures
 
     return grid_to_plot
 
