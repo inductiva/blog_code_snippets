@@ -10,7 +10,7 @@ import logging
 
 
 def process_temperature_ranges_flag(hot_edge_temp_range):
-    """Check validity of temperature range flags and convert to float tuple.
+    """Checks validity of temperature range flags and converts to float tuple.
 
     Args:
         hot_edge_temp_range: Temperature range in which the PINN is trained
@@ -55,7 +55,7 @@ def check_hot_edge_temp_within_training_range(hot_edge_temp, temp_ranges):
 
 
 def process_holes_flag(holes_list, plate_length):
-    """Check validity of holes flag and convert it to proper format.
+    """Checks validity of holes flag and converts it to a list of named tuples.
 
     Args:
         holes_list: List of strings ["x1","y1","r1", ..., "xk","yk","rk"].
@@ -90,3 +90,24 @@ def process_holes_flag(holes_list, plate_length):
         raise Exception("Hole(s) out of domain")
 
     return holes_list_processed
+
+
+def process_colorbar_limits_flag(flag_colorbar_limits):
+    """Checks validity of colorbar limits flag and converts to a list of floats.
+
+    Args:
+        flag_colorbar_limits: List of strings.
+
+    Returns:
+        List of two floats (colorbar upper and lower limits, respectively).
+    """
+    if flag_colorbar_limits is None:
+        return flag_colorbar_limits
+
+    # Check the length of the input
+    if not len(flag_colorbar_limits) == 2:
+        raise Exception(
+            "The colorbar limits can only have two entries (upper and lower"
+            " limits for the colorbar).")
+
+    return [float(flag_colorbar_limits[0]), float(flag_colorbar_limits[1])]
