@@ -12,14 +12,16 @@ import numpy as np
 import imageio
 
 
-def generate_figures_across_time(u_memory,
-                                 plate_length,
-                                 diff_coef,
-                                 holes_list=None,
-                                 holes_temperature=0,
-                                 output_path=None,
-                                 error_bool=False):
-    """Plots the solution function obtained in a set of timeframes.
+def generate_output_across_time(u_memory,
+                                plate_length,
+                                diff_coef,
+                                output_formats,
+                                holes_list=None,
+                                holes_temperature=0,
+                                output_path=None,
+                                error_bool=False,
+                                colorbar_limits=None):
+    """Outputs a figure or gif of the provided function in a set of timeframes.
 
     Args:
         u_memory: Saved timeframes to be plotted [[t_1, u_1], ..., [t_k, u_k]].
@@ -27,7 +29,9 @@ def generate_figures_across_time(u_memory,
         representing the plate with each entry corresponding to the temperature
         at that given point.
         plate_length: Length of the plate edges.
-        diff_coef: Diffusion coeficient considered
+        diff_coef: Diffusion coeficient considered.
+        output_formats: List of formats in which we intend to represent the
+        provided function.
         holes_list: List of holes (named tuples) considered
         holes_temperature: Temperature of holes boundary. The interior points of
         the hole are plotted with that temperature
@@ -52,9 +56,19 @@ def generate_figures_across_time(u_memory,
         plot_label = "Temperature"
         color_map = "inferno"
 
-    # Build figure skeleton
+    # Get colorbar limits
+    if colorbar_limits is None:
+        min_value_grid_all_time, max_value_grid_all_time = \
+            get_grid_extreme_values(u_memory)
+    else:
+        min_value_grid_all_time = colorbar_limits[0]
+        max_value_grid_all_time = colorbar_limits[1]
+
+    # Formatting font (to LaTeX)
     rc_params = {"font.family": "serif", "text.usetex": True}
-    with mpl.rc_context(rc_params):
+
+    if "figure" in output_formats:
+        # Build figure skeleton
         fig, axs = plt.subplots(math.ceil(num_plots / 5),
                                 5,
                                 figsize=(20, 8),
@@ -64,23 +78,71 @@ def generate_figures_across_time(u_memory,
         axs = axs.ravel()
 
         # Plot for each time instant
-        min_value_all_time, max_value_grid_all_time = get_grid_extreme_values(
-            u_memory)
         for time_idx in range(num_plots):
-            im = plot_plate(axs[time_idx], u_memory[time_idx][0],
-                            u_memory[time_idx][1], holes_list,
-                            holes_temperature, grid_limits, output_num_x,
-                            output_num_y, min_value_all_time,
-                            max_value_grid_all_time, diff_coef, color_map)
+            im = plot_plate(
+                axs[time_idx],
+                u_memory[time_idx][0],
+                u_memory[time_idx][1],
+                holes_list,
+                holes_temperature,
+                grid_limits,
+                output_num_x,
+                output_num_y,
+                min_value_grid_all_time,
+                max_value_grid_all_time,
+                diff_coef,
+                color_map,
+            )
 
         # Create color map to draw colors from
         cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
         fig.colorbar(im, cax=cbar_ax, label=plot_label)
 
-        # Save or plot solution
-        plt.savefig(output_path + "/figure_across_time",
+        # Save figure
+        plt.savefig(os.path.join(output_path, "figure_across_time"),
                     dpi=300,
                     bbox_inches="tight")
+
+    if "gif" in output_formats:
+        # Generate new directory to save gif auxiliary figures
+        frames_folder_path = os.path.join(output_path, "frames")
+        if not os.path.exists(frames_folder_path):
+            os.mkdir(frames_folder_path)
+
+        for time_idx in range(num_plots):
+            rc_params["font.size"] = 20
+            with mpl.rc_context(rc_params):
+                # Generate frame for each time instant considered considered
+                fig, ax = plt.subplots()
+                im = plot_plate(
+                    ax,
+                    u_memory[time_idx][0],
+                    u_memory[time_idx][1],
+                    holes_list,
+                    holes_temperature,
+                    grid_limits,
+                    output_num_x,
+                    output_num_y,
+                    min_value_grid_all_time,
+                    max_value_grid_all_time,
+                    diff_coef,
+                    color_map,
+                )
+
+                ## Create color map to draw colors from
+                cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
+                fig.colorbar(im, cax=cbar_ax, label=plot_label)
+
+                # Save frame
+                frame_name = f"{time_idx:03d}.png"
+                plt.savefig(os.path.join(frames_folder_path, frame_name),
+                            dpi=300,
+                            bbox_inches="tight")
+                plt.close(fig)
+
+        # Generate gif
+        generate_gif_from_frames_in_directory(frames_folder_path, output_path,
+                                              f"{plot_label.lower()}.gif")
 
 
 def get_grid_extreme_values(u_memory):
@@ -191,75 +253,6 @@ def point_within_holes(x_point, y_point, holes_list):
                 return True
     else:
         return False
-
-
-def generate_gif_across_time(u_memory,
-                             plate_length,
-                             diff_coef,
-                             holes_list=None,
-                             holes_temperature=0,
-                             output_path=None,
-                             error_bool=False):
-    """Generates a gif of the solution function obtained in a set of timeframes.
-
-    Args:
-        u_memory: Saved timeframes to be plotted [[t_1, u_1], ..., [t_k, u_k]].
-        t_i are the time instants respective to the plate u_i, which is a matrix
-        representing the plate with each entry corresponding to the temperature
-        at that given point.
-        plate_length: Length of the plate edges.
-        diff_coef: Diffusion coeficient considered
-        holes_list: List of holes (named tuples) considered
-        holes_temperature: Temperature of holes boundary. The interior points of
-        the hole are plotted with that temperature
-        output_path: Path where the gif is saved.
-
-    Returns:
-        Gif (and auxiliary plots) of the inferred solution function in the
-        prescribed timesteps.
-    """
-
-    # Initialization
-    output_num_x = u_memory[0][1].shape[0]
-    output_num_y = u_memory[0][1].shape[1]
-    num_plots = len(u_memory)
-    grid_limits = (-plate_length / 2, plate_length / 2, -plate_length / 2,
-                   plate_length / 2)  # left, right, bottom, top
-
-    # Different features between temperature and error plot
-    if error_bool:
-        plot_label = "Error"
-        color_map = "cividis"
-    else:
-        plot_label = "Temperature"
-        color_map = "inferno"
-
-    # Generate new directory to save gif auxiliary figures
-    frames_folder_path = os.path.join(output_path, "frames")
-    if not os.path.exists(frames_folder_path):
-        os.mkdir(frames_folder_path)
-
-    # Generate and save figures
-    min_value_all_time, max_value_grid_all_time = get_grid_extreme_values(
-        u_memory)
-    rc_params = {"font.family": "serif", "text.usetex": True, "font.size": 20}
-    for time_idx in range(num_plots):
-        with mpl.rc_context(rc_params):
-            fig, ax = plt.subplots()
-            im = plot_plate(ax, u_memory[time_idx][0], u_memory[time_idx][1],
-                            holes_list, holes_temperature, grid_limits,
-                            output_num_x, output_num_y, min_value_all_time,
-                            max_value_grid_all_time, diff_coef, color_map)
-            plt.colorbar(im, label=plot_label)
-            frame_name = f"{time_idx:03d}.png"
-            plt.savefig(os.path.join(frames_folder_path, frame_name),
-                        dpi=300,
-                        bbox_inches="tight")
-            plt.close(fig)
-
-    # Generate gif
-    generate_gif_from_frames_in_directory(frames_folder_path, output_path,
-                                          f"{plot_label.lower()}.gif")
 
 
 def generate_gif_from_frames_in_directory(frames_directory, movie_directory,

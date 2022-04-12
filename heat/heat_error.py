@@ -19,6 +19,7 @@ from absl import flags
 import pickle
 
 import utils.plot
+import utils.flags
 
 FLAGS = flags.FLAGS
 
@@ -29,15 +30,29 @@ flags.DEFINE_string(
 flags.DEFINE_string("idrlnet_folder", "idrlnet_run",
                     "Folder where the desired idrlnet model is stored.")
 flags.DEFINE_list(
-    "output_format", ["figure", "gif"], "Defines the formats in which the "
+    "output_formats", ["figure", "gif"], "Defines the formats in which the "
     "output is obtained. Only two formats are available: gif and figure. "
     "If 'figure' is in the list provided, it outputs a figure with several "
     "subplots at different timesteps. If 'gif' is in the list provided, it "
     "outputs a gif with several plots at different timesteps.")
+flags.DEFINE_list(
+    "colorbar_limits", None, "Limits of the colorbar present in "
+    "the inference output. When set to 'None' (default), those "
+    "limits are adjusted automatically.")
 
 
 def main(_):
 
+    print(f"FDM results to be read from {FLAGS.fdm_folder}.")
+    print(f"IDRLnet results to be read from {FLAGS.idrlnet_folder}.")
+    print(f"The output to be saved as {FLAGS.output_formats}.")
+    print(f"Colorbar limits: {FLAGS.colorbar_limits}.")
+
+    # Check colorbar limits flag
+    colorbar_limits = utils.flags.process_colorbar_limits_flag(
+        FLAGS.colorbar_limits)
+
+    # Get current directory
     current_directory = os.getcwd()
 
     # Load FDM results
@@ -65,22 +80,15 @@ def main(_):
         os.mkdir(error_directory)
 
     # Plot results
-    if "figure" in FLAGS.output_format:
-        utils.plot.generate_figures_across_time(
-            error_timeframes,
-            metadata["plate_length"],
-            metadata["diff_coef"],
-            output_path=error_directory,
-            error_bool=True,
-        )
-    if "gif" in FLAGS.output_format:
-        utils.plot.generate_gif_across_time(
-            error_timeframes,
-            metadata["plate_length"],
-            metadata["diff_coef"],
-            output_path=error_directory,
-            error_bool=True,
-        )
+    utils.plot.generate_output_across_time(
+        error_timeframes,
+        metadata["plate_length"],
+        metadata["diff_coef"],
+        FLAGS.output_formats,
+        output_path=error_directory,
+        colorbar_limits=colorbar_limits,
+        error_bool=True,
+    )
 
 
 if __name__ == "__main__":

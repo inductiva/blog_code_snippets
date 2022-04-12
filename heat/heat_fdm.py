@@ -32,6 +32,7 @@ import numpy as np
 import pickle
 
 import utils.plot
+import utils.flags
 
 FLAGS = flags.FLAGS
 
@@ -75,7 +76,7 @@ flags.DEFINE_enum(
 
 # Output variables
 flags.DEFINE_list(
-    "output_format", ["figure", "gif"], "Defines the formats in which the "
+    "output_formats", ["figure", "gif"], "Defines the formats in which the "
     "output is obtained. Only two formats are available: gif and figure. "
     "If 'figure' is in the list provided, it outputs a figure with several "
     "subplots at different timesteps. If 'gif' is in the list provided, it "
@@ -86,6 +87,10 @@ flags.DEFINE_integer("num_plots",
                      100,
                      "Number of plots to be obtained.",
                      lower_bound=1)
+flags.DEFINE_list(
+    "colorbar_limits", None, "Limits of the colorbar present in "
+    "the inference output. When set to 'None' (default), those "
+    "limits are adjusted automatically.")
 
 
 def compute_dimension_delta(dimension_range, dimension_num_points):
@@ -334,8 +339,12 @@ def main(_):
           f"temperature: {FLAGS.cold_edge_temp}; Initial points temperature: "
           f"{FLAGS.initial_temp}")
     print(f"Vectorization strategy: {FLAGS.vectorization_strategy}")
-    print(f"The output is saved as {FLAGS.output_format} in "
+    print(f"The output is saved as {FLAGS.output_formats} in "
           f"{FLAGS.output_folder}.")
+
+    # Process
+    colorbar_limits = utils.flags.process_colorbar_limits_flag(
+        FLAGS.colorbar_limits)
 
     # Compute spatial grid spacings, time step and relevant problem variables
     delta_t = compute_dimension_delta(FLAGS.t_final, FLAGS.num_timeframes)
@@ -375,19 +384,14 @@ def main(_):
         pickle.dump(u_memorized_timeframes, f)
 
     # Plot results
-    if "figure" in FLAGS.output_format:
-        utils.plot.generate_figures_across_time(u_memorized_timeframes,
-                                                FLAGS.plate_length,
-                                                FLAGS.diff_coef,
-                                                holes_list=[],
-                                                output_path=results_folder_path)
-
-    if "gif" in FLAGS.output_format:
-        utils.plot.generate_gif_across_time(u_memorized_timeframes,
-                                            FLAGS.plate_length,
-                                            FLAGS.diff_coef,
-                                            holes_list=[],
-                                            output_path=results_folder_path)
+    utils.plot.generate_output_across_time(
+        u_memorized_timeframes,
+        FLAGS.plate_length,
+        FLAGS.diff_coef,
+        FLAGS.output_formats,
+        output_path=results_folder_path,
+        colorbar_limits=colorbar_limits,
+    )
 
 
 if __name__ == "__main__":

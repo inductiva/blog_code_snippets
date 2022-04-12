@@ -129,11 +129,15 @@ flags.DEFINE_integer("num_plots",
 flags.DEFINE_string("output_folder", "idrlnet_run",
                     "Name of the directory where the output is stored.")
 flags.DEFINE_list(
-    "output_format", ["figure", "gif"], "Defines the formats in which the "
+    "output_formats", ["figure", "gif"], "Defines the formats in which the "
     "output is obtained. Only two formats are available: gif and figure. "
     "If 'figure' is in the list provided, it outputs a figure with several "
     "subplots at different timesteps. If 'gif' is in the list provided, it "
     "outputs a gif with several plots at different timesteps.")
+flags.DEFINE_list(
+    "colorbar_limits", None, "Limits of the colorbar present in "
+    "the inference output. When set to 'None' (default), those "
+    "limits are adjusted automatically.")
 
 
 def main(_):
@@ -162,8 +166,8 @@ def main(_):
     print(f"Density of cold boundary points used: "
           f"{FLAGS.density_cold_boundary}")
     print(f"Density of hot boundary points used: {FLAGS.density_hot_boundary}")
-    print(f"The output is saved as {FLAGS.output_format} in "
-          f"{FLAGS.output_folder}.")
+    print(f"The output is saved as {FLAGS.output_formats} in "
+          f"{FLAGS.output_folder}. Colorbar limits: {FLAGS.colorbar_limits}.")
     print(f"Use pre-trained network in {FLAGS.pre_trained_folder} as starting "
           f"point.")
 
@@ -174,6 +178,8 @@ def main(_):
         FLAGS.hot_edge_temp_to_plot, hot_bc_range_tuple)
     holes_list = utils.flags.process_holes_flag(FLAGS.holes_list,
                                                 FLAGS.plate_length)
+    colorbar_limits = utils.flags.process_colorbar_limits_flag(
+        FLAGS.colorbar_limits)
 
     # Define variables of the problem
     x, y, t, hot_bc = sp.symbols("x y t hot_bc")
@@ -273,17 +279,16 @@ def main(_):
         os.mkdir(results_folder_path)
 
     # Plot results
-    if "figure" in FLAGS.output_format:
-        utils.plot.generate_figures_across_time(u_inferred_timeframes,
-                                                FLAGS.plate_length,
-                                                FLAGS.diff_coef, holes_list,
-                                                FLAGS.holes_temp,
-                                                results_folder_path)
-    if "gif" in FLAGS.output_format:
-        utils.plot.generate_gif_across_time(u_inferred_timeframes,
-                                            FLAGS.plate_length, FLAGS.diff_coef,
-                                            holes_list, FLAGS.holes_temp,
-                                            results_folder_path)
+    utils.plot.generate_output_across_time(
+        u_inferred_timeframes,
+        FLAGS.plate_length,
+        FLAGS.diff_coef,
+        FLAGS.output_formats,
+        holes_list=holes_list,
+        holes_temperature=FLAGS.holes_temp,
+        output_path=results_folder_path,
+        colorbar_limits=colorbar_limits,
+    )
 
     # Save metadata
     metadata = {
@@ -296,4 +301,4 @@ def main(_):
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
-app.run(main)
+    app.run(main)
